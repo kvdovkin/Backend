@@ -1,0 +1,14 @@
+yes-да
+what-что
+it-это
+please-пожалуйста
+hi-привет
+and-и
+or-или
+if-если
+in-в
+one-один
+two-два
+three-три
+four-четыре
+five-пять
