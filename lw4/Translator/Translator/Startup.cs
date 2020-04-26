@@ -1,12 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Translator.Data.Models;
+using Microsoft.Extensions.Hosting;
 
 namespace Translator
 {
@@ -18,38 +19,44 @@ namespace Translator
         {
             services.AddMvc();
         }
-
-        private async Task sendResponseAsync(HttpContext context, string message, int statusCode = 200)
-        {
-            context.Response.ContentType = "text/plain; charset=utf-8";
-            await context.Response.WriteAsync(message);
-        }
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseDeveloperExceptionPage();
-            app.Run(async (context) =>
+            if (env.IsDevelopment())
             {
-                if (context.Request.Query.ContainsKey("word"))
+                app.UseDeveloperExceptionPage();
+            }
+
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapGet("/", async context =>
                 {
-                    string word = context.Request.Query["word"];
-                    Console.WriteLine(word);
-                    Dictionary dictionary = new Dictionary("Dictionary\\Dictionary.txt");
-                    string translation = dictionary.Find(word);
-                    if (translation == null)
+                    context.Response.ContentType = "text/plain; charset=utf-8";
+                    if (context.Request.Query.ContainsKey("word"))
                     {
-                        await sendResponseAsync(context, "Not Found", 404);
+                        string word = context.Request.Query["word"];
+                        Console.WriteLine(word);
+                        Translator dictionary = new Translator("dictionary.txt");
+                        string translation = dictionary.Translate(word);
+                        if (translation == null)
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            await context.Response.WriteAsync("NotFound");
+                        }
+                        else
+                        {
+                            context.Response.StatusCode = (int)HttpStatusCode.OK;
+                            await context.Response.WriteAsync(translation);
+                        }
                     }
                     else
                     {
-                        await sendResponseAsync(context, translation);
+                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                        await context.Response.WriteAsync("BadRequest");
                     }
-                }
-                else
-                {
-                    await sendResponseAsync(context, "Client Error", 400);
-                }
+                });
             });
         }
     }
